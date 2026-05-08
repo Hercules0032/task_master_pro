@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Task Manager</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body class="container mt-5">
+    <div class="d-flex justify-content-between">
+        <h2>Smart Task Manager</h2>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+    </div>
+    
+    <div id="analytics" class="alert alert-info mt-3">Loading analytics...</div>
+
+    <div class="card p-4 my-4">
+        <h4>Add New Task</h4>
+        <div class="row g-3">
+            <div class="col"><input type="text" id="title" class="form-control" placeholder="Task Title"></div>
+            <div class="col"><input type="text" id="desc" class="form-control" placeholder="Description"></div>
+            <div class="col">
+                <select id="priority" class="form-select">
+                    <option value="Low">Low</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="High">High</option>
+                </select>
+            </div>
+            <div class="col"><button onclick="addTask()" class="btn btn-primary">Add Task</button></div>
+        </div>
+    </div>
+
+    <table class="table mt-4">
+        <thead>
+            <tr><th>Title</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="task-table">
+            {% for task in tasks %}
+            <tr>
+                <td>{{ task.title }}</td>
+                <td>{{ task.priority }}</td>
+                <td><span class="badge bg-secondary">{{ task.status }}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-success" onclick="updateTask({{ task.id }}, 'Completed')">Done</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTask({{ task.id }})">Delete</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        const socket = io();
+
+       
+        socket.on('task_updated', function(data) {
+            console.log(data.message);
+            location.reload(); 
+        });
+
+        function addTask() {
+            const data = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('desc').value,
+                priority: document.getElementById('priority').value
+            };
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            }).then(() => location.reload());
+        }
+
+        function updateTask(id, status) {
+            fetch(`/api/tasks/${id}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: status})
+            }).then(() => location.reload());
+        }
+
+        function deleteTask(id) {
+            fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+            .then(() => location.reload());
+        }
+
+        
+        fetch('/api/analytics')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('analytics').innerHTML = 
+                    `<b>Total:</b> ${data.total} | <b>Completed:</b> ${data.completed} | <b>Pending:</b> ${data.pending} | <b>Completion:</b> ${data.percent}%`;
+            });
+    </script>
+</body>
+</html>
